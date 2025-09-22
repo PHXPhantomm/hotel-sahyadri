@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Sahyadri | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>body{font-family:'Inter',sans-serif}.hidden{display:none}.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background-color:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:50}</style>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-white shadow-md">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-gray-900">Hotel <span class="text-orange-600">Sahyadri</span></a>
+            <button id="logout-btn" class="ml-2 bg-gray-600 text-white font-semibold px-4 py-2 rounded-lg shadow-md hover:bg-gray-700">Logout</button>
+        </nav>
+    </header>
+
+    <main id="student-dashboard-view" class="hidden container mx-auto px-6 py-12">
+        <h2 class="text-3xl font-bold mb-6">Your Subscription</h2>
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-2xl mx-auto"><div id="student-data" class="text-center"><p id="student-sub-status" class="text-2xl font-bold"></p><div class="relative pt-1 mt-6"><div class="overflow-hidden h-4 text-xs flex rounded-full bg-orange-200"><div id="student-progress-bar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-orange-600"></div></div><p id="student-days-left" class="text-xl font-bold mt-4"></p></div></div><div class="mt-8 border-t pt-6 space-y-2"><p><strong>Name:</strong> <span id="student-name-display"></span></p><p><strong>Plan:</strong> <span id="student-plan-display"></span></p><p><strong>Expires:</strong> <span id="student-expiry-display"></span></p></div></div>
+    </main>
+
+    <main id="admin-dashboard-view" class="hidden container mx-auto px-6 py-12">
+        <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Admin Dashboard</h2><button id="add-student-btn" class="bg-green-600 text-white font-semibold px-5 py-2 rounded-lg shadow-md hover:bg-green-700">Add Student</button></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"><div class="bg-white p-6 rounded-xl shadow-lg"><p class="text-sm">Total Students</p><p id="total-students" class="text-3xl font-bold">0</p></div><div class="bg-white p-6 rounded-xl shadow-lg"><p class="text-sm">Active</p><p id="active-subs" class="text-3xl font-bold text-green-600">0</p></div><div class="bg-white p-6 rounded-xl shadow-lg"><p class="text-sm">Expired</p><p id="expired-subs" class="text-3xl font-bold text-red-600">0</p></div><div class="bg-white p-6 rounded-xl shadow-lg"><p class="text-sm">Revenue</p><p id="monthly-revenue" class="text-3xl font-bold">₹0</p></div></div>
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8"><div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg"><h3 class="font-bold mb-4">Status</h3><canvas id="subs-pie-chart"></canvas></div><div class="lg:col-span-3 bg-white p-6 rounded-xl shadow-lg"><h3 class="font-bold mb-4">Plans</h3><canvas id="plans-bar-chart"></canvas></div></div>
+        <div class="bg-white p-6 rounded-xl shadow-lg overflow-x-auto"><h3 class="font-bold mb-4">Student Management</h3><table class="w-full text-left"><thead><tr class="bg-gray-100 text-sm"><th class="p-3">Name</th><th class="p-3">Email</th><th class="p-3">Plan</th><th class="p-3">Expires</th><th class="p-3">Status</th><th class="p-3">Actions</th></tr></thead><tbody id="students-table-body"></tbody></table></div>
+    </main>
+
+    <div id="student-modal" class="modal-overlay hidden"><div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg m-4"><h2 id="modal-title" class="text-2xl font-bold mb-6"></h2><form id="student-form"><input type="hidden" id="student-id-input"><div class="mb-4"><label class="block mb-1">Full Name</label><input type="text" id="student-name-input" class="w-full p-2 border rounded" required></div><div class="mb-4"><label class="block mb-1">Email</label><input type="email" id="student-email-input" class="w-full p-2 border rounded" required></div><div class="mb-4"><label class="block mb-1">Plan</label><select id="student-plan-input" class="w-full p-2 border bg-white rounded" required><option value="1">One Meal</option><option value="2">Two Meals</option></select></div><div class="mb-6"><label class="block mb-1">Expiry Date</label><input type="date" id="student-expiry-input" class="w-full p-2 border rounded" required></div><div class="flex justify-end gap-4"><button type="button" id="cancel-modal-btn" class="px-5 py-2 bg-gray-200 rounded">Cancel</button><button type="submit" class="px-5 py-2 bg-orange-600 text-white rounded">Save</button></div></form></div></div>
+    <div id="confirm-delete-modal" class="modal-overlay hidden"><div class="bg-white rounded-lg p-8 w-full max-w-sm m-4 text-center"><h2 class="text-xl font-bold mb-4">Are you sure?</h2><p class="mb-6">This will permanently delete the student.</p><div class="flex justify-center gap-4"><button id="cancel-delete-btn" class="px-6 py-2 bg-gray-200 rounded">Cancel</button><button id="confirm-delete-btn" class="px-6 py-2 bg-red-600 text-white rounded">Delete</button></div></div></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const DB_KEY = 'hotelSahyadriData';
+            const LOGGED_IN_USER_KEY = 'hotelSahyadriLoggedIn';
+            const ADMIN_EMAIL = 'admin@sahyadri.com';
+
+            const loggedInUserEmail = localStorage.getItem(LOGGED_IN_USER_KEY);
+            if (!loggedInUserEmail) { window.location.href = 'login.html'; return; }
+
+            let subsPieChart = null;
+            let plansBarChart = null;
+
+            function renderStudentDashboard() {
+                const db = JSON.parse(localStorage.getItem(DB_KEY));
+                const user = db.users.find(u => u.email === loggedInUserEmail);
+                const expiryDate = new Date(user.subscriptionEnd), startDate = new Date(user.subscriptionStart), today = new Date();
+                const daysLeft = Math.max(0, Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24)));
+                const progress = Math.max(0, Math.min(100, (1-(today-startDate)/(expiryDate-startDate))*100));
+                
+                document.getElementById('student-name-display').textContent = user.name;
+                document.getElementById('student-plan-display').textContent = user.plan === 1 ? 'One Meal' : 'Two Meals';
+                document.getElementById('student-expiry-display').textContent = expiryDate.toLocaleDateString();
+                document.getElementById('student-sub-status').textContent = daysLeft > 0 ? "Active" : "Expired";
+                document.getElementById('student-days-left').textContent = `${daysLeft} days left`;
+                document.getElementById('student-progress-bar').style.width = `${progress}%`;
+                document.getElementById('student-dashboard-view').classList.remove('hidden');
+            }
+
+            function renderAdminDashboard() {
+                const db = JSON.parse(localStorage.getItem(DB_KEY));
+                const students = db.users.filter(u => u.email !== ADMIN_EMAIL);
+                const today = new Date();
+                let active=0, expired=0, revenue=0, plan1=0, plan2=0;
+                students.forEach(s => { new Date(s.subscriptionEnd) > today ? (active++, revenue += s.plan===1?2000:3600) : expired++; s.plan===1?plan1++:plan2++; });
+                
+                document.getElementById('total-students').textContent = students.length;
+                document.getElementById('active-subs').textContent = active;
+                document.getElementById('expired-subs').textContent = expired;
+                document.getElementById('monthly-revenue').textContent = `₹${revenue.toLocaleString()}`;
+
+                if(subsPieChart) subsPieChart.destroy();
+                subsPieChart = new Chart(document.getElementById('subs-pie-chart'), {type:'doughnut',data:{labels:['Active','Expired'],datasets:[{data:[active,expired],backgroundColor:['#16A34A','#DC2626']}]}});
+                if(plansBarChart) plansBarChart.destroy();
+                plansBarChart = new Chart(document.getElementById('plans-bar-chart'), {type:'bar',data:{labels:['One Meal','Two Meals'],datasets:[{data:[plan1,plan2],backgroundColor:['#F97316','#EA580C']}]},options:{plugins:{legend:{display:false}}}});
+
+                const tableBody = document.getElementById('students-table-body');
+                tableBody.innerHTML = '';
+                students.forEach(s => {
+                    const expiry = new Date(s.subscriptionEnd);
+                    const isActive = expiry > today;
+                    tableBody.innerHTML += `<tr class="border-b"><td class="p-3">${s.name}</td><td class="p-3">${s.email}</td><td class="p-3">${s.plan===1?'One':'Two'}</td><td class="p-3">${expiry.toLocaleDateString()}</td><td class="p-3"><span class="px-2 py-1 text-xs rounded-full ${isActive?'bg-green-100 text-green-800':'bg-red-100 text-red-800'}">${isActive?'Active':'Expired'}</span></td><td class="p-3"><button class="edit-btn text-blue-600" data-id="${s.id}">Edit</button><button class="delete-btn text-red-600 ml-2" data-id="${s.id}">Delete</button></td></tr>`;
+                });
+                document.getElementById('admin-dashboard-view').classList.remove('hidden');
+            }
+            
+            if (loggedInUserEmail === ADMIN_EMAIL) renderAdminDashboard(); else renderStudentDashboard();
+
+            // --- ALL MODAL AND CRUD LOGIC ---
+            const studentModal = document.getElementById('student-modal');
+            const confirmDeleteModal = document.getElementById('confirm-delete-modal');
+            let studentIdToChange = null;
+
+            document.getElementById('add-student-btn').addEventListener('click', () => {
+                document.getElementById('student-form').reset();
+                studentIdToChange = null;
+                document.getElementById('modal-title').textContent = 'Add New Student';
+                document.getElementById('student-email-input').removeAttribute('disabled');
+                studentModal.classList.remove('hidden');
+            });
+            
+            document.getElementById('admin-dashboard-view').addEventListener('click', (e) => {
+                if(e.target.classList.contains('edit-btn')) {
+                    const db = JSON.parse(localStorage.getItem(DB_KEY));
+                    studentIdToChange = e.target.dataset.id;
+                    const user = db.users.find(u => u.id === studentIdToChange);
+                    document.getElementById('modal-title').textContent = 'Edit Student';
+                    document.getElementById('student-name-input').value = user.name;
+                    document.getElementById('student-email-input').value = user.email;
+                    document.getElementById('student-email-input').setAttribute('disabled', true);
+                    document.getElementById('student-plan-input').value = user.plan;
+                    document.getElementById('student-expiry-input').value = new Date(user.subscriptionEnd).toISOString().split('T')[0];
+                    studentModal.classList.remove('hidden');
+                }
+                if(e.target.classList.contains('delete-btn')) {
+                    studentIdToChange = e.target.dataset.id;
+                    confirmDeleteModal.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('student-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const db = JSON.parse(localStorage.getItem(DB_KEY));
+                const expiry = new Date(document.getElementById('student-expiry-input').value);
+                if (studentIdToChange) { // Edit
+                    const i = db.users.findIndex(u => u.id === studentIdToChange);
+                    db.users[i].name = document.getElementById('student-name-input').value;
+                    db.users[i].plan = parseInt(document.getElementById('student-plan-input').value);
+                    db.users[i].subscriptionEnd = expiry.toISOString();
+                } else { // Add
+                    const email = document.getElementById('student-email-input').value;
+                    if(db.users.find(u=>u.email===email)) {alert('Email exists!');return;}
+                    db.users.push({id:email, name:document.getElementById('student-name-input').value, email, password:'password', plan:parseInt(document.getElementById('student-plan-input').value), subscriptionStart: new Date().toISOString(), subscriptionEnd:expiry.toISOString()});
+                }
+                localStorage.setItem(DB_KEY, JSON.stringify(db));
+                studentModal.classList.add('hidden');
+                renderAdminDashboard();
+            });
+
+            document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+                const db = JSON.parse(localStorage.getItem(DB_KEY));
+                db.users = db.users.filter(u => u.id !== studentIdToChange);
+                localStorage.setItem(DB_KEY, JSON.stringify(db));
+                confirmDeleteModal.classList.add('hidden');
+                renderAdminDashboard();
+            });
+
+            document.getElementById('cancel-modal-btn').addEventListener('click', () => studentModal.classList.add('hidden'));
+            document.getElementById('cancel-delete-btn').addEventListener('click', () => confirmDeleteModal.classList.add('hidden'));
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                localStorage.removeItem(LOGGED_IN_USER_KEY);
+                window.location.href = 'index.html';
+            });
+        });
+    </script>
+</body>
+</html>
+
